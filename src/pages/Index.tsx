@@ -9,7 +9,7 @@ interface Order {
   patient: string;
   doctor: string;
   technician: string;
-  type: string;
+  types: string[];
   status: "new" | "in_progress" | "done" | "cancelled";
   date: string;
   dueDate: string;
@@ -46,12 +46,12 @@ interface Notification {
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 const mockOrders: Order[] = [
-  { id: "ЗН-2401", patient: "Иванов И.И.", doctor: "Кузнецов А.В.", technician: "Петров С.Н.", type: "Протезирование", status: "new", date: "21.04.2026", dueDate: "28.04.2026", priority: "high", teeth: [14, 15, 16] },
-  { id: "ЗН-2400", patient: "Смирнова О.Г.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", type: "Ортодонтия", status: "in_progress", date: "20.04.2026", dueDate: "27.04.2026", priority: "medium", teeth: [11, 12, 13, 21, 22, 23] },
-  { id: "ЗН-2399", patient: "Козлов В.Р.", doctor: "Кузнецов А.В.", technician: "Орлов В.Я.", type: "Имплантация", status: "done", date: "19.04.2026", dueDate: "25.04.2026", priority: "low", teeth: [46] },
-  { id: "ЗН-2398", patient: "Новикова Т.С.", doctor: "Морозов П.Л.", technician: "Петров С.Н.", type: "Виниры", status: "in_progress", date: "19.04.2026", dueDate: "24.04.2026", priority: "high", teeth: [11, 12, 13, 14] },
-  { id: "ЗН-2397", patient: "Фёдоров К.Д.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", type: "Коронки", status: "new", date: "18.04.2026", dueDate: "26.04.2026", priority: "medium", teeth: [36, 37] },
-  { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", type: "Мосты", status: "cancelled", date: "17.04.2026", dueDate: "23.04.2026", priority: "low", teeth: [44, 45, 46] },
+  { id: "ЗН-2401", patient: "Иванов И.И.", doctor: "Кузнецов А.В.", technician: "Петров С.Н.", types: ["Протезирование", "Коронки"], status: "new", date: "21.04.2026", dueDate: "28.04.2026", priority: "high", teeth: [14, 15, 16] },
+  { id: "ЗН-2400", patient: "Смирнова О.Г.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", types: ["Ортодонтия"], status: "in_progress", date: "20.04.2026", dueDate: "27.04.2026", priority: "medium", teeth: [11, 12, 13, 21, 22, 23] },
+  { id: "ЗН-2399", patient: "Козлов В.Р.", doctor: "Кузнецов А.В.", technician: "Орлов В.Я.", types: ["Имплантация", "Мосты"], status: "done", date: "19.04.2026", dueDate: "25.04.2026", priority: "low", teeth: [46] },
+  { id: "ЗН-2398", patient: "Новикова Т.С.", doctor: "Морозов П.Л.", technician: "Петров С.Н.", types: ["Виниры"], status: "in_progress", date: "19.04.2026", dueDate: "24.04.2026", priority: "high", teeth: [11, 12, 13, 14] },
+  { id: "ЗН-2397", patient: "Фёдоров К.Д.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", types: ["Коронки", "Протезирование", "Виниры"], status: "new", date: "18.04.2026", dueDate: "26.04.2026", priority: "medium", teeth: [36, 37] },
+  { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", types: ["Мосты"], status: "cancelled", date: "17.04.2026", dueDate: "23.04.2026", priority: "low", teeth: [44, 45, 46] },
 ];
 
 const mockDoctors: Person[] = [
@@ -207,14 +207,75 @@ function Toggle({ defaultOn }: { defaultOn: boolean }) {
   );
 }
 
-const ORDER_TYPES = ["Все типы", "Протезирование", "Ортодонтия", "Имплантация", "Виниры", "Коронки", "Мосты"];
+const ORDER_TYPES_LIST = ["Протезирование", "Ортодонтия", "Имплантация", "Виниры", "Коронки", "Мосты"];
 const ALL_DOCTORS = ["Все врачи", ...mockDoctors.map(d => d.name.split(" ").slice(0, 2).join(" ") + " " + d.name.split(" ")[2]?.[0] + ".")];
 const ALL_TECHNICIANS = ["Все техники", ...mockTechnicians.map(t => t.name.split(" ").slice(0, 2).join(" ") + " " + t.name.split(" ")[2]?.[0] + ".")];
 
+// Мульти-выбор типов работ
+function TypeMultiDropdown({ selected, onChange }: { selected: string[]; onChange: (v: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const isActive = selected.length > 0;
+
+  const toggle = (t: string) =>
+    onChange(selected.includes(t) ? selected.filter(s => s !== t) : [...selected, t]);
+
+  const label = isActive
+    ? selected.length === 1 ? selected[0] : `${selected[0]} +${selected.length - 1}`
+    : "Все типы";
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border transition-all whitespace-nowrap
+          ${isActive ? "bg-primary/10 border-primary/40 text-primary" : "bg-white border-border text-muted-foreground hover:border-primary/40"}`}
+      >
+        <Icon name="Tag" size={13} />
+        <span className="max-w-[120px] truncate">{label}</span>
+        {isActive && (
+          <button
+            onClick={e => { e.stopPropagation(); onChange([]); }}
+            className="hover:text-destructive transition-colors"
+          >
+            <Icon name="X" size={11} />
+          </button>
+        )}
+        <Icon name="ChevronDown" size={13} className={`transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-11 w-52 bg-white border border-border rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in-up">
+          <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Типы работ</span>
+            {selected.length > 0 && (
+              <button onClick={() => onChange([])} className="text-xs text-primary hover:underline">Сбросить</button>
+            )}
+          </div>
+          {ORDER_TYPES_LIST.map(t => (
+            <button
+              key={t}
+              onClick={() => toggle(t)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-left hover:bg-muted/50 transition-colors
+                ${selected.includes(t) ? "text-primary font-medium" : "text-foreground"}`}
+            >
+              <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors
+                ${selected.includes(t) ? "bg-primary border-primary" : "border-border"}`}>
+                {selected.includes(t) && <Icon name="Check" size={10} className="text-white" />}
+              </span>
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+// Одиночный dropdown (врач / техник)
 function FilterDropdown({
-  value, options, onChange, icon, activeColor = "bg-primary/10 border-primary/40 text-primary",
+  value, options, onChange, icon,
 }: {
-  value: string; options: string[]; onChange: (v: string) => void; icon: string; activeColor?: string;
+  value: string; options: string[]; onChange: (v: string) => void; icon: string;
 }) {
   const [open, setOpen] = useState(false);
   const isActive = value !== options[0];
@@ -223,14 +284,14 @@ function FilterDropdown({
       <button
         onClick={() => setOpen(!open)}
         className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border transition-all whitespace-nowrap
-          ${isActive ? activeColor : "bg-white border-border text-muted-foreground hover:border-primary/40"}`}
+          ${isActive ? "bg-primary/10 border-primary/40 text-primary" : "bg-white border-border text-muted-foreground hover:border-primary/40"}`}
       >
         <Icon name={icon} size={13} fallback="Filter" />
         <span className="max-w-[110px] truncate">{value}</span>
         <Icon name="ChevronDown" size={13} className={`transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-11 min-w-[160px] bg-white border border-border rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in-up">
+        <div className="absolute left-0 top-11 min-w-[170px] bg-white border border-border rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in-up">
           {options.map(opt => (
             <button
               key={opt}
@@ -253,11 +314,10 @@ function FilterDropdown({
 function OrdersView() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | Order["status"]>("all");
-  const [typeFilter, setTypeFilter] = useState("Все типы");
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [doctorFilter, setDoctorFilter] = useState("Все врачи");
   const [techFilter, setTechFilter] = useState("Все техники");
 
-  // Для модального редактирования зубной формулы
   const [editTeeth, setEditTeeth] = useState<{ orderId: string; teeth: number[] } | null>(null);
   const [orders, setOrders] = useState(mockOrders);
 
@@ -265,7 +325,7 @@ function OrdersView() {
     const q = search.toLowerCase();
     const matchSearch = o.id.toLowerCase().includes(q) || o.patient.toLowerCase().includes(q) || o.doctor.toLowerCase().includes(q);
     const matchStatus = filter === "all" || o.status === filter;
-    const matchType = typeFilter === "Все типы" || o.type === typeFilter;
+    const matchType = typeFilter.length === 0 || o.types.some(t => typeFilter.includes(t));
     const matchDoctor = doctorFilter === "Все врачи" || o.doctor.startsWith(doctorFilter.split(" ").slice(0, 2).join(" "));
     const matchTech = techFilter === "Все техники" || o.technician.startsWith(techFilter.split(" ").slice(0, 2).join(" "));
     return matchSearch && matchStatus && matchType && matchDoctor && matchTech;
@@ -306,7 +366,7 @@ function OrdersView() {
         </div>
 
         <div className="flex gap-2 flex-wrap items-center">
-          <FilterDropdown value={typeFilter} options={ORDER_TYPES} onChange={setTypeFilter} icon="Tag" />
+          <TypeMultiDropdown selected={typeFilter} onChange={setTypeFilter} />
           <FilterDropdown value={doctorFilter} options={ALL_DOCTORS} onChange={setDoctorFilter} icon="Stethoscope" />
           <FilterDropdown value={techFilter} options={ALL_TECHNICIANS} onChange={setTechFilter} icon="Wrench" />
           <div className="w-px h-5 bg-border mx-1" />
@@ -351,7 +411,13 @@ function OrdersView() {
                   <td className="px-4 py-3 text-sm">{order.patient}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{order.doctor}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{order.technician}</td>
-                  <td className="px-4 py-3 text-sm hidden lg:table-cell">{order.type}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <div className="flex flex-wrap gap-1">
+                      {order.types.map(t => (
+                        <span key={t} className="px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground font-medium whitespace-nowrap">{t}</span>
+                      ))}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <button
                       onClick={() => setEditTeeth({ orderId: order.id, teeth: order.teeth })}
