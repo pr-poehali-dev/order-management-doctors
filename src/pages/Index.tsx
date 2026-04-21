@@ -31,6 +31,7 @@ interface Person {
   phone: string;
   orders: number;
   status: "active" | "busy" | "offline";
+  clinic?: string;
 }
 
 interface Patient {
@@ -61,11 +62,13 @@ const mockOrders: Order[] = [
   { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", works: [{ name: "Мосты", qty: 2 }], status: "cancelled", date: "17.04.2026", arrivalDate: "16.04.2026", dueDate: "23.04.2026", priority: "low", teeth: [44, 45, 46], photos: [] },
 ];
 
+const CLINICS = ["Клиника на Ленина", "Клиника на Пушкина", "Клиника на Садовой", "Клиника на Центральной", "Клиника на Мира"];
+
 const mockDoctors: Person[] = [
-  { id: "Д-001", name: "Кузнецов Алексей Викторович", specialty: "Ортопед", phone: "+7 (900) 123-45-67", orders: 14, status: "active" },
-  { id: "Д-002", name: "Волкова Елена Михайловна", specialty: "Ортодонт", phone: "+7 (900) 234-56-78", orders: 9, status: "busy" },
-  { id: "Д-003", name: "Морозов Павел Леонидович", specialty: "Хирург", phone: "+7 (900) 345-67-89", orders: 7, status: "active" },
-  { id: "Д-004", name: "Соколова Анна Игоревна", specialty: "Терапевт", phone: "+7 (900) 456-78-90", orders: 5, status: "offline" },
+  { id: "Д-001", name: "Кузнецов Алексей Викторович", specialty: "Ортопед", phone: "+7 (900) 123-45-67", orders: 14, status: "active", clinic: "Клиника на Ленина" },
+  { id: "Д-002", name: "Волкова Елена Михайловна", specialty: "Ортодонт", phone: "+7 (900) 234-56-78", orders: 9, status: "busy", clinic: "Клиника на Пушкина" },
+  { id: "Д-003", name: "Морозов Павел Леонидович", specialty: "Хирург", phone: "+7 (900) 345-67-89", orders: 7, status: "active", clinic: "Клиника на Ленина" },
+  { id: "Д-004", name: "Соколова Анна Игоревна", specialty: "Терапевт", phone: "+7 (900) 456-78-90", orders: 5, status: "offline", clinic: "" },
 ];
 
 const mockTechnicians: Person[] = [
@@ -615,19 +618,70 @@ function OrdersView() {
   );
 }
 
+// ─── Clinic selector inline ───────────────────────────────────────────────────
+function ClinicSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1.5 text-xs rounded-lg px-2 py-1 border transition-all
+          ${value ? "bg-secondary text-secondary-foreground border-secondary hover:border-primary/40" : "border-dashed border-border text-muted-foreground hover:border-primary/40 hover:text-primary"}`}
+      >
+        <Icon name="Building2" size={12} />
+        <span className="max-w-[140px] truncate">{value || "Выбрать клинику"}</span>
+        <Icon name="ChevronDown" size={11} className={`transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-8 w-52 bg-white border border-border rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in-up">
+          <div className="px-3 py-2 border-b border-border">
+            <span className="text-xs font-medium text-muted-foreground">Выберите клинику</span>
+          </div>
+          {value && (
+            <button
+              onClick={() => { onChange(""); setOpen(false); }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left text-red-500 hover:bg-red-50 transition-colors border-b border-border/50"
+            >
+              <Icon name="X" size={11} />
+              Убрать клинику
+            </button>
+          )}
+          {CLINICS.map(c => (
+            <button
+              key={c}
+              onClick={() => { onChange(c); setOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-xs text-left hover:bg-muted/50 transition-colors
+                ${value === c ? "text-primary font-medium bg-primary/5" : "text-foreground"}`}
+            >
+              {c}
+              {value === c && <Icon name="Check" size={12} />}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />}
+    </div>
+  );
+}
+
 // ─── Section: People ──────────────────────────────────────────────────────────
-function PeopleView({ data, type }: { data: Person[]; type: "doctors" | "technicians" }) {
+function PeopleView({ data: initialData, type }: { data: Person[]; type: "doctors" | "technicians" }) {
+  const [people, setPeople] = useState(initialData);
+
+  const updateClinic = (id: string, clinic: string) =>
+    setPeople(prev => prev.map(p => p.id === id ? { ...p, clinic } : p));
+
   return (
     <div className="animate-fade-in-up">
       <div className="flex justify-between items-center mb-6">
-        <p className="text-sm text-muted-foreground">{data.length} {type === "doctors" ? "врачей" : "техников"} в системе</p>
+        <p className="text-sm text-muted-foreground">{people.length} {type === "doctors" ? "врачей" : "техников"} в системе</p>
         <button className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
           <Icon name="UserPlus" size={16} />
           Добавить
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {data.map((person) => (
+        {people.map((person) => (
           <div key={person.id} className="bg-white rounded-2xl border border-border p-5 hover:shadow-md transition-all">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -641,7 +695,18 @@ function PeopleView({ data, type }: { data: Person[]; type: "doctors" | "technic
               </div>
               <span className="text-xs font-mono text-muted-foreground">{person.id}</span>
             </div>
-            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/60">
+
+            {/* Клиника — только для врачей */}
+            {type === "doctors" && (
+              <div className="mb-3">
+                <ClinicSelector
+                  value={person.clinic || ""}
+                  onChange={clinic => updateClinic(person.id, clinic)}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mt-2 pt-3 border-t border-border/60">
               <PersonStatus status={person.status} />
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
