@@ -17,9 +17,11 @@ interface Order {
   works: WorkItem[];
   status: "new" | "in_progress" | "done" | "cancelled";
   date: string;
+  arrivalDate: string;
   dueDate: string;
   priority: "high" | "medium" | "low";
   teeth: number[];
+  photos: string[];
 }
 
 interface Person {
@@ -51,12 +53,12 @@ interface Notification {
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 const mockOrders: Order[] = [
-  { id: "ЗН-2401", patient: "Иванов И.И.", doctor: "Кузнецов А.В.", technician: "Петров С.Н.", works: [{ name: "Протезирование", qty: 2 }, { name: "Коронки", qty: 1 }], status: "new", date: "21.04.2026", dueDate: "28.04.2026", priority: "high", teeth: [14, 15, 16] },
-  { id: "ЗН-2400", patient: "Смирнова О.Г.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", works: [{ name: "Ортодонтия", qty: 1 }], status: "in_progress", date: "20.04.2026", dueDate: "27.04.2026", priority: "medium", teeth: [11, 12, 13, 21, 22, 23] },
-  { id: "ЗН-2399", patient: "Козлов В.Р.", doctor: "Кузнецов А.В.", technician: "Орлов В.Я.", works: [{ name: "Имплантация", qty: 1 }, { name: "Мосты", qty: 3 }], status: "done", date: "19.04.2026", dueDate: "25.04.2026", priority: "low", teeth: [46] },
-  { id: "ЗН-2398", patient: "Новикова Т.С.", doctor: "Морозов П.Л.", technician: "Петров С.Н.", works: [{ name: "Виниры", qty: 4 }], status: "in_progress", date: "19.04.2026", dueDate: "24.04.2026", priority: "high", teeth: [11, 12, 13, 14] },
-  { id: "ЗН-2397", patient: "Фёдоров К.Д.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", works: [{ name: "Коронки", qty: 2 }, { name: "Протезирование", qty: 1 }, { name: "Виниры", qty: 3 }], status: "new", date: "18.04.2026", dueDate: "26.04.2026", priority: "medium", teeth: [36, 37] },
-  { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", works: [{ name: "Мосты", qty: 2 }], status: "cancelled", date: "17.04.2026", dueDate: "23.04.2026", priority: "low", teeth: [44, 45, 46] },
+  { id: "ЗН-2401", patient: "Иванов И.И.", doctor: "Кузнецов А.В.", technician: "Петров С.Н.", works: [{ name: "Протезирование", qty: 2 }, { name: "Коронки", qty: 1 }], status: "new", date: "21.04.2026", arrivalDate: "21.04.2026", dueDate: "28.04.2026", priority: "high", teeth: [14, 15, 16], photos: [] },
+  { id: "ЗН-2400", patient: "Смирнова О.Г.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", works: [{ name: "Ортодонтия", qty: 1 }], status: "in_progress", date: "20.04.2026", arrivalDate: "20.04.2026", dueDate: "27.04.2026", priority: "medium", teeth: [11, 12, 13, 21, 22, 23], photos: [] },
+  { id: "ЗН-2399", patient: "Козлов В.Р.", doctor: "Кузнецов А.В.", technician: "Орлов В.Я.", works: [{ name: "Имплантация", qty: 1 }, { name: "Мосты", qty: 3 }], status: "done", date: "19.04.2026", arrivalDate: "19.04.2026", dueDate: "25.04.2026", priority: "low", teeth: [46], photos: [] },
+  { id: "ЗН-2398", patient: "Новикова Т.С.", doctor: "Морозов П.Л.", technician: "Петров С.Н.", works: [{ name: "Виниры", qty: 4 }], status: "in_progress", date: "19.04.2026", arrivalDate: "18.04.2026", dueDate: "24.04.2026", priority: "high", teeth: [11, 12, 13, 14], photos: [] },
+  { id: "ЗН-2397", patient: "Фёдоров К.Д.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", works: [{ name: "Коронки", qty: 2 }, { name: "Протезирование", qty: 1 }, { name: "Виниры", qty: 3 }], status: "new", date: "18.04.2026", arrivalDate: "17.04.2026", dueDate: "26.04.2026", priority: "medium", teeth: [36, 37], photos: [] },
+  { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", works: [{ name: "Мосты", qty: 2 }], status: "cancelled", date: "17.04.2026", arrivalDate: "16.04.2026", dueDate: "23.04.2026", priority: "low", teeth: [44, 45, 46], photos: [] },
 ];
 
 const mockDoctors: Person[] = [
@@ -324,7 +326,31 @@ function OrdersView() {
   const [techFilter, setTechFilter] = useState("Все техники");
 
   const [editTeeth, setEditTeeth] = useState<{ orderId: string; teeth: number[] } | null>(null);
+  const [photoModal, setPhotoModal] = useState<{ orderId: string; photos: string[] } | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const [orders, setOrders] = useState(mockOrders);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!photoModal || !e.target.files) return;
+    const files = Array.from(e.target.files);
+    const readers = files.map(f => new Promise<string>(res => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.readAsDataURL(f);
+    }));
+    Promise.all(readers).then(urls => {
+      const newPhotos = [...photoModal.photos, ...urls];
+      setPhotoModal({ ...photoModal, photos: newPhotos });
+      setOrders(prev => prev.map(o => o.id === photoModal.orderId ? { ...o, photos: newPhotos } : o));
+    });
+  };
+
+  const removePhoto = (idx: number) => {
+    if (!photoModal) return;
+    const newPhotos = photoModal.photos.filter((_, i) => i !== idx);
+    setPhotoModal({ ...photoModal, photos: newPhotos });
+    setOrders(prev => prev.map(o => o.id === photoModal.orderId ? { ...o, photos: newPhotos } : o));
+  };
 
   const filtered = orders.filter(o => {
     const q = search.toLowerCase();
@@ -398,7 +424,9 @@ function OrdersView() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Вид работ</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Зубы</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Статус</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Приход</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Сдача</th>
+              <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Фото</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -438,10 +466,26 @@ function OrdersView() {
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={order.status} /></td>
                   <td className="px-4 py-3 hidden sm:table-cell">
+                    <span className="text-xs text-muted-foreground">{order.arrivalDate}</span>
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     <span className={`text-xs font-medium ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
                       {isOverdue && <span className="mr-1">⚠</span>}
                       {order.dueDate}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setPhotoModal({ orderId: order.id, photos: order.photos })}
+                      className={`relative flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors
+                        ${order.photos.length > 0
+                          ? "bg-primary/10 text-primary hover:bg-primary/20"
+                          : "text-muted-foreground hover:bg-muted"}`}
+                      title="Фотографии"
+                    >
+                      <Icon name="Image" size={14} />
+                      {order.photos.length > 0 && <span>{order.photos.length}</span>}
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <button className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
@@ -460,6 +504,73 @@ function OrdersView() {
           </div>
         )}
       </div>
+
+      {/* Модал фотографий */}
+      {photoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setPhotoModal(null)} />
+          <div className="relative bg-white rounded-2xl border border-border shadow-2xl w-full max-w-xl animate-fade-in-up overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div>
+                <h3 className="font-semibold text-foreground">Фотографии</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{photoModal.orderId} · {photoModal.photos.length} фото</p>
+              </div>
+              <button onClick={() => setPhotoModal(null)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                <Icon name="X" size={16} />
+              </button>
+            </div>
+
+            <div className="p-5">
+              {/* Grid фото */}
+              {photoModal.photos.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {photoModal.photos.map((src, i) => (
+                    <div key={i} className="group relative aspect-square rounded-xl overflow-hidden border border-border bg-muted">
+                      <img src={src} alt={`Фото ${i + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                        <button
+                          onClick={() => setLightbox(src)}
+                          className="p-1.5 rounded-lg bg-white/90 text-foreground hover:bg-white transition-colors"
+                        >
+                          <Icon name="ZoomIn" size={14} />
+                        </button>
+                        <button
+                          onClick={() => removePhoto(i)}
+                          className="p-1.5 rounded-lg bg-white/90 text-red-500 hover:bg-white transition-colors"
+                        >
+                          <Icon name="Trash2" size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-10 text-center text-muted-foreground mb-4">
+                  <Icon name="ImageOff" size={32} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Нет прикреплённых фото</p>
+                </div>
+              )}
+
+              {/* Загрузка */}
+              <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer">
+                <Icon name="Upload" size={16} />
+                Прикрепить фото
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Лайтбокс */}
+      {lightbox && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80" onClick={() => setLightbox(null)}>
+          <button className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors">
+            <Icon name="X" size={20} />
+          </button>
+          <img src={lightbox} alt="Просмотр" className="max-w-full max-h-full rounded-xl object-contain shadow-2xl" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
 
       {/* Модал зубной формулы */}
       {editTeeth && (
