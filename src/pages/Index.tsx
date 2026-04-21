@@ -12,7 +12,9 @@ interface Order {
   type: string;
   status: "new" | "in_progress" | "done" | "cancelled";
   date: string;
+  dueDate: string;
   priority: "high" | "medium" | "low";
+  teeth: number[];
 }
 
 interface Person {
@@ -44,12 +46,12 @@ interface Notification {
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 const mockOrders: Order[] = [
-  { id: "ЗН-2401", patient: "Иванов И.И.", doctor: "Кузнецов А.В.", technician: "Петров С.Н.", type: "Протезирование", status: "new", date: "21.04.2026", priority: "high" },
-  { id: "ЗН-2400", patient: "Смирнова О.Г.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", type: "Ортодонтия", status: "in_progress", date: "20.04.2026", priority: "medium" },
-  { id: "ЗН-2399", patient: "Козлов В.Р.", doctor: "Кузнецов А.В.", technician: "Орлов В.Я.", type: "Имплантация", status: "done", date: "19.04.2026", priority: "low" },
-  { id: "ЗН-2398", patient: "Новикова Т.С.", doctor: "Морозов П.Л.", technician: "Петров С.Н.", type: "Виниры", status: "in_progress", date: "19.04.2026", priority: "high" },
-  { id: "ЗН-2397", patient: "Фёдоров К.Д.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", type: "Коронки", status: "new", date: "18.04.2026", priority: "medium" },
-  { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", type: "Мосты", status: "cancelled", date: "17.04.2026", priority: "low" },
+  { id: "ЗН-2401", patient: "Иванов И.И.", doctor: "Кузнецов А.В.", technician: "Петров С.Н.", type: "Протезирование", status: "new", date: "21.04.2026", dueDate: "28.04.2026", priority: "high", teeth: [14, 15, 16] },
+  { id: "ЗН-2400", patient: "Смирнова О.Г.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", type: "Ортодонтия", status: "in_progress", date: "20.04.2026", dueDate: "27.04.2026", priority: "medium", teeth: [11, 12, 13, 21, 22, 23] },
+  { id: "ЗН-2399", patient: "Козлов В.Р.", doctor: "Кузнецов А.В.", technician: "Орлов В.Я.", type: "Имплантация", status: "done", date: "19.04.2026", dueDate: "25.04.2026", priority: "low", teeth: [46] },
+  { id: "ЗН-2398", patient: "Новикова Т.С.", doctor: "Морозов П.Л.", technician: "Петров С.Н.", type: "Виниры", status: "in_progress", date: "19.04.2026", dueDate: "24.04.2026", priority: "high", teeth: [11, 12, 13, 14] },
+  { id: "ЗН-2397", patient: "Фёдоров К.Д.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", type: "Коронки", status: "new", date: "18.04.2026", dueDate: "26.04.2026", priority: "medium", teeth: [36, 37] },
+  { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", type: "Мосты", status: "cancelled", date: "17.04.2026", dueDate: "23.04.2026", priority: "low", teeth: [44, 45, 46] },
 ];
 
 const mockDoctors: Person[] = [
@@ -113,6 +115,82 @@ function PriorityDot({ priority }: { priority: Order["priority"] }) {
   return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${map[priority]}`} />;
 }
 
+// Зубная формула: верхний ряд 18→11 | 21→28, нижний ряд 48→41 | 31→38
+const UPPER_RIGHT = [18,17,16,15,14,13,12,11];
+const UPPER_LEFT  = [21,22,23,24,25,26,27,28];
+const LOWER_RIGHT = [48,47,46,45,44,43,42,41];
+const LOWER_LEFT  = [31,32,33,34,35,36,37,38];
+
+function ToothCell({ num, selected, onClick }: { num: number; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={`Зуб ${num}`}
+      className={`w-6 h-6 rounded text-[9px] font-mono font-medium border transition-all leading-none
+        ${selected
+          ? "bg-primary text-white border-primary shadow-sm scale-105"
+          : "bg-white text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
+        }`}
+    >
+      {num}
+    </button>
+  );
+}
+
+function ToothFormula({ selected, onChange }: { selected: number[]; onChange: (teeth: number[]) => void }) {
+  const toggle = (n: number) =>
+    onChange(selected.includes(n) ? selected.filter(t => t !== n) : [...selected, n].sort((a, b) => a - b));
+
+  const Row = ({ nums, label }: { nums: number[]; label?: string }) => (
+    <div className="flex items-center gap-0.5">
+      {nums.map(n => <ToothCell key={n} num={n} selected={selected.includes(n)} onClick={() => toggle(n)} />)}
+    </div>
+  );
+
+  return (
+    <div className="select-none">
+      <div className="flex gap-1 items-start mb-0.5">
+        <div className="flex gap-0.5">
+          <Row nums={UPPER_RIGHT} />
+        </div>
+        <div className="w-px bg-border self-stretch mx-0.5" />
+        <div className="flex gap-0.5">
+          <Row nums={UPPER_LEFT} />
+        </div>
+      </div>
+      <div className="h-px bg-border mb-0.5" />
+      <div className="flex gap-1 items-start">
+        <div className="flex gap-0.5">
+          <Row nums={LOWER_RIGHT} />
+        </div>
+        <div className="w-px bg-border self-stretch mx-0.5" />
+        <div className="flex gap-0.5">
+          <Row nums={LOWER_LEFT} />
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">Выбрано:</span>
+        {selected.length === 0
+          ? <span className="text-xs text-muted-foreground italic">не выбрано</span>
+          : <span className="text-xs font-mono font-medium text-primary">{selected.join(", ")}</span>
+        }
+        {selected.length > 0 && (
+          <button onClick={() => onChange([])} className="text-xs text-muted-foreground hover:text-destructive ml-auto transition-colors">Сбросить</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TeethBadge({ teeth }: { teeth: number[] }) {
+  if (!teeth.length) return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <span className="font-mono text-xs text-primary bg-primary/8 px-1.5 py-0.5 rounded-md">
+      {teeth.join(", ")}
+    </span>
+  );
+}
+
 function Toggle({ defaultOn }: { defaultOn: boolean }) {
   const [on, setOn] = useState(defaultOn);
   return (
@@ -130,23 +208,70 @@ function Toggle({ defaultOn }: { defaultOn: boolean }) {
 }
 
 const ORDER_TYPES = ["Все типы", "Протезирование", "Ортодонтия", "Имплантация", "Виниры", "Коронки", "Мосты"];
+const ALL_DOCTORS = ["Все врачи", ...mockDoctors.map(d => d.name.split(" ").slice(0, 2).join(" ") + " " + d.name.split(" ")[2]?.[0] + ".")];
+const ALL_TECHNICIANS = ["Все техники", ...mockTechnicians.map(t => t.name.split(" ").slice(0, 2).join(" ") + " " + t.name.split(" ")[2]?.[0] + ".")];
+
+function FilterDropdown({
+  value, options, onChange, icon, activeColor = "bg-primary/10 border-primary/40 text-primary",
+}: {
+  value: string; options: string[]; onChange: (v: string) => void; icon: string; activeColor?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const isActive = value !== options[0];
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border transition-all whitespace-nowrap
+          ${isActive ? activeColor : "bg-white border-border text-muted-foreground hover:border-primary/40"}`}
+      >
+        <Icon name={icon} size={13} fallback="Filter" />
+        <span className="max-w-[110px] truncate">{value}</span>
+        <Icon name="ChevronDown" size={13} className={`transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-11 min-w-[160px] bg-white border border-border rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in-up">
+          {options.map(opt => (
+            <button
+              key={opt}
+              onClick={() => { onChange(opt); setOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-xs text-left hover:bg-muted/50 transition-colors
+                ${value === opt ? "text-primary font-medium bg-primary/5" : "text-foreground"}`}
+            >
+              {opt}
+              {value === opt && <Icon name="Check" size={12} />}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />}
+    </div>
+  );
+}
 
 // ─── Section: Orders ──────────────────────────────────────────────────────────
 function OrdersView() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | Order["status"]>("all");
   const [typeFilter, setTypeFilter] = useState("Все типы");
-  const [typeOpen, setTypeOpen] = useState(false);
+  const [doctorFilter, setDoctorFilter] = useState("Все врачи");
+  const [techFilter, setTechFilter] = useState("Все техники");
 
-  const filtered = mockOrders.filter(o => {
+  // Для модального редактирования зубной формулы
+  const [editTeeth, setEditTeeth] = useState<{ orderId: string; teeth: number[] } | null>(null);
+  const [orders, setOrders] = useState(mockOrders);
+
+  const filtered = orders.filter(o => {
     const q = search.toLowerCase();
     const matchSearch = o.id.toLowerCase().includes(q) || o.patient.toLowerCase().includes(q) || o.doctor.toLowerCase().includes(q);
-    const matchFilter = filter === "all" || o.status === filter;
+    const matchStatus = filter === "all" || o.status === filter;
     const matchType = typeFilter === "Все типы" || o.type === typeFilter;
-    return matchSearch && matchFilter && matchType;
+    const matchDoctor = doctorFilter === "Все врачи" || o.doctor.startsWith(doctorFilter.split(" ").slice(0, 2).join(" "));
+    const matchTech = techFilter === "Все техники" || o.technician.startsWith(techFilter.split(" ").slice(0, 2).join(" "));
+    return matchSearch && matchStatus && matchType && matchDoctor && matchTech;
   });
 
-  const filters = [
+  const statusFilters = [
     { key: "all", label: "Все" },
     { key: "new", label: "Новые" },
     { key: "in_progress", label: "В работе" },
@@ -154,47 +279,38 @@ function OrdersView() {
     { key: "cancelled", label: "Отменены" },
   ] as const;
 
+  const saveTeeth = () => {
+    if (!editTeeth) return;
+    setOrders(prev => prev.map(o => o.id === editTeeth.orderId ? { ...o, teeth: editTeeth.teeth } : o));
+    setEditTeeth(null);
+  };
+
   return (
     <div className="animate-fade-in-up">
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-            placeholder="Поиск по номеру, пациенту, врачу…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-
-        {/* Type dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setTypeOpen(!typeOpen)}
-            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl border transition-all whitespace-nowrap ${typeFilter !== "Все типы" ? "bg-primary/10 border-primary/40 text-primary" : "bg-white border-border text-muted-foreground hover:border-primary/40"}`}
-          >
-            <Icon name="Tag" size={13} />
-            {typeFilter}
-            <Icon name="ChevronDown" size={13} className={`transition-transform ${typeOpen ? "rotate-180" : ""}`} />
+      {/* Filters row */}
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Поиск по номеру, пациенту, врачу…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm whitespace-nowrap">
+            <Icon name="Plus" size={16} />
+            Новый заказ
           </button>
-          {typeOpen && (
-            <div className="absolute left-0 top-11 w-44 bg-white border border-border rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in-up">
-              {ORDER_TYPES.map(t => (
-                <button
-                  key={t}
-                  onClick={() => { setTypeFilter(t); setTypeOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-xs text-left hover:bg-muted/50 transition-colors ${typeFilter === t ? "text-primary font-medium bg-primary/5" : "text-foreground"}`}
-                >
-                  {t}
-                  {typeFilter === t && <Icon name="Check" size={12} />}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          {filters.map(f => (
+        <div className="flex gap-2 flex-wrap items-center">
+          <FilterDropdown value={typeFilter} options={ORDER_TYPES} onChange={setTypeFilter} icon="Tag" />
+          <FilterDropdown value={doctorFilter} options={ALL_DOCTORS} onChange={setDoctorFilter} icon="Stethoscope" />
+          <FilterDropdown value={techFilter} options={ALL_TECHNICIANS} onChange={setTechFilter} icon="Wrench" />
+          <div className="w-px h-5 bg-border mx-1" />
+          {statusFilters.map(f => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key as typeof filter)}
@@ -204,46 +320,63 @@ function OrdersView() {
             </button>
           ))}
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors shadow-sm whitespace-nowrap">
-          <Icon name="Plus" size={16} />
-          Новый заказ
-        </button>
       </div>
-      {typeOpen && <div className="fixed inset-0 z-20" onClick={() => setTypeOpen(false)} />}
 
       <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-muted/40">
-              {["Номер", "Пациент", "Врач", "Техник", "Тип", "Статус", "Дата", ""].map((h, i) => (
-                <th key={i} className={`text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider ${i >= 2 && i <= 3 ? "hidden md:table-cell" : ""} ${i >= 4 && i <= 4 ? "hidden lg:table-cell" : ""} ${i === 6 ? "hidden sm:table-cell" : ""}`}>
-                  {h}
-                </th>
-              ))}
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Номер</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Пациент</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Врач</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Техник</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Тип</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Зубы</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Статус</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Сдача</th>
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
-            {filtered.map((order, i) => (
-              <tr key={order.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <PriorityDot priority={order.priority} />
-                    <span className="font-mono text-sm font-medium text-foreground">{order.id}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm">{order.patient}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{order.doctor}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{order.technician}</td>
-                <td className="px-4 py-3 text-sm hidden lg:table-cell">{order.type}</td>
-                <td className="px-4 py-3"><StatusBadge status={order.status} /></td>
-                <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{order.date}</td>
-                <td className="px-4 py-3">
-                  <button className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-                    <Icon name="MoreHorizontal" size={16} />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {filtered.map((order) => {
+              const isOverdue = order.status !== "done" && order.status !== "cancelled" && order.dueDate < "22.04.2026";
+              return (
+                <tr key={order.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <PriorityDot priority={order.priority} />
+                      <span className="font-mono text-sm font-medium text-foreground">{order.id}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">{order.patient}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{order.doctor}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{order.technician}</td>
+                  <td className="px-4 py-3 text-sm hidden lg:table-cell">{order.type}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <button
+                      onClick={() => setEditTeeth({ orderId: order.id, teeth: order.teeth })}
+                      className="group flex items-center gap-1"
+                      title="Редактировать зубную формулу"
+                    >
+                      <TeethBadge teeth={order.teeth} />
+                      <Icon name="Pencil" size={11} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  </td>
+                  <td className="px-4 py-3"><StatusBadge status={order.status} /></td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <span className={`text-xs font-medium ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
+                      {isOverdue && <span className="mr-1">⚠</span>}
+                      {order.dueDate}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                      <Icon name="MoreHorizontal" size={16} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {filtered.length === 0 && (
@@ -253,6 +386,46 @@ function OrdersView() {
           </div>
         )}
       </div>
+
+      {/* Модал зубной формулы */}
+      {editTeeth && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setEditTeeth(null)} />
+          <div className="relative bg-white rounded-2xl border border-border shadow-2xl p-6 w-full max-w-lg animate-fade-in-up">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-semibold text-foreground">Зубная формула</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{editTeeth.orderId} — нажмите на зуб для выбора</p>
+              </div>
+              <button onClick={() => setEditTeeth(null)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                <Icon name="X" size={16} />
+              </button>
+            </div>
+
+            <div className="bg-muted/30 rounded-xl p-4 mb-5">
+              <div className="flex justify-center mb-1">
+                <span className="text-[10px] text-muted-foreground mr-2">Верхняя челюсть</span>
+              </div>
+              <ToothFormula
+                selected={editTeeth.teeth}
+                onChange={teeth => setEditTeeth({ ...editTeeth, teeth })}
+              />
+              <div className="flex justify-center mt-2">
+                <span className="text-[10px] text-muted-foreground">Нижняя челюсть</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setEditTeeth(null)} className="px-4 py-2 text-sm rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors">
+                Отмена
+              </button>
+              <button onClick={saveTeeth} className="px-4 py-2 text-sm rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors font-medium">
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
