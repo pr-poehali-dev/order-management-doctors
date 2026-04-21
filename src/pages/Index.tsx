@@ -4,12 +4,17 @@ import Icon from "@/components/ui/icon";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Section = "orders" | "doctors" | "technicians" | "patients" | "reports" | "stats" | "settings";
 
+interface WorkItem {
+  name: string;
+  qty: number;
+}
+
 interface Order {
   id: string;
   patient: string;
   doctor: string;
   technician: string;
-  types: string[];
+  works: WorkItem[];
   status: "new" | "in_progress" | "done" | "cancelled";
   date: string;
   dueDate: string;
@@ -46,12 +51,12 @@ interface Notification {
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 const mockOrders: Order[] = [
-  { id: "ЗН-2401", patient: "Иванов И.И.", doctor: "Кузнецов А.В.", technician: "Петров С.Н.", types: ["Протезирование", "Коронки"], status: "new", date: "21.04.2026", dueDate: "28.04.2026", priority: "high", teeth: [14, 15, 16] },
-  { id: "ЗН-2400", patient: "Смирнова О.Г.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", types: ["Ортодонтия"], status: "in_progress", date: "20.04.2026", dueDate: "27.04.2026", priority: "medium", teeth: [11, 12, 13, 21, 22, 23] },
-  { id: "ЗН-2399", patient: "Козлов В.Р.", doctor: "Кузнецов А.В.", technician: "Орлов В.Я.", types: ["Имплантация", "Мосты"], status: "done", date: "19.04.2026", dueDate: "25.04.2026", priority: "low", teeth: [46] },
-  { id: "ЗН-2398", patient: "Новикова Т.С.", doctor: "Морозов П.Л.", technician: "Петров С.Н.", types: ["Виниры"], status: "in_progress", date: "19.04.2026", dueDate: "24.04.2026", priority: "high", teeth: [11, 12, 13, 14] },
-  { id: "ЗН-2397", patient: "Фёдоров К.Д.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", types: ["Коронки", "Протезирование", "Виниры"], status: "new", date: "18.04.2026", dueDate: "26.04.2026", priority: "medium", teeth: [36, 37] },
-  { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", types: ["Мосты"], status: "cancelled", date: "17.04.2026", dueDate: "23.04.2026", priority: "low", teeth: [44, 45, 46] },
+  { id: "ЗН-2401", patient: "Иванов И.И.", doctor: "Кузнецов А.В.", technician: "Петров С.Н.", works: [{ name: "Протезирование", qty: 2 }, { name: "Коронки", qty: 1 }], status: "new", date: "21.04.2026", dueDate: "28.04.2026", priority: "high", teeth: [14, 15, 16] },
+  { id: "ЗН-2400", patient: "Смирнова О.Г.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", works: [{ name: "Ортодонтия", qty: 1 }], status: "in_progress", date: "20.04.2026", dueDate: "27.04.2026", priority: "medium", teeth: [11, 12, 13, 21, 22, 23] },
+  { id: "ЗН-2399", patient: "Козлов В.Р.", doctor: "Кузнецов А.В.", technician: "Орлов В.Я.", works: [{ name: "Имплантация", qty: 1 }, { name: "Мосты", qty: 3 }], status: "done", date: "19.04.2026", dueDate: "25.04.2026", priority: "low", teeth: [46] },
+  { id: "ЗН-2398", patient: "Новикова Т.С.", doctor: "Морозов П.Л.", technician: "Петров С.Н.", works: [{ name: "Виниры", qty: 4 }], status: "in_progress", date: "19.04.2026", dueDate: "24.04.2026", priority: "high", teeth: [11, 12, 13, 14] },
+  { id: "ЗН-2397", patient: "Фёдоров К.Д.", doctor: "Волкова Е.М.", technician: "Сидоров Д.К.", works: [{ name: "Коронки", qty: 2 }, { name: "Протезирование", qty: 1 }, { name: "Виниры", qty: 3 }], status: "new", date: "18.04.2026", dueDate: "26.04.2026", priority: "medium", teeth: [36, 37] },
+  { id: "ЗН-2396", patient: "Алексеева М.В.", doctor: "Морозов П.Л.", technician: "Орлов В.Я.", works: [{ name: "Мосты", qty: 2 }], status: "cancelled", date: "17.04.2026", dueDate: "23.04.2026", priority: "low", teeth: [44, 45, 46] },
 ];
 
 const mockDoctors: Person[] = [
@@ -211,8 +216,8 @@ const ORDER_TYPES_LIST = ["Протезирование", "Ортодонтия"
 const ALL_DOCTORS = ["Все врачи", ...mockDoctors.map(d => d.name.split(" ").slice(0, 2).join(" ") + " " + d.name.split(" ")[2]?.[0] + ".")];
 const ALL_TECHNICIANS = ["Все техники", ...mockTechnicians.map(t => t.name.split(" ").slice(0, 2).join(" ") + " " + t.name.split(" ")[2]?.[0] + ".")];
 
-// Мульти-выбор типов работ
-function TypeMultiDropdown({ selected, onChange }: { selected: string[]; onChange: (v: string[]) => void }) {
+// Мульти-выбор видов работ
+function WorkMultiDropdown({ selected, onChange }: { selected: string[]; onChange: (v: string[]) => void }) {
   const [open, setOpen] = useState(false);
   const isActive = selected.length > 0;
 
@@ -221,7 +226,7 @@ function TypeMultiDropdown({ selected, onChange }: { selected: string[]; onChang
 
   const label = isActive
     ? selected.length === 1 ? selected[0] : `${selected[0]} +${selected.length - 1}`
-    : "Все типы";
+    : "Все виды";
 
   return (
     <div className="relative">
@@ -245,7 +250,7 @@ function TypeMultiDropdown({ selected, onChange }: { selected: string[]; onChang
       {open && (
         <div className="absolute left-0 top-11 w-52 bg-white border border-border rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in-up">
           <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Типы работ</span>
+            <span className="text-xs text-muted-foreground font-medium">Виды работ</span>
             {selected.length > 0 && (
               <button onClick={() => onChange([])} className="text-xs text-primary hover:underline">Сбросить</button>
             )}
@@ -325,7 +330,7 @@ function OrdersView() {
     const q = search.toLowerCase();
     const matchSearch = o.id.toLowerCase().includes(q) || o.patient.toLowerCase().includes(q) || o.doctor.toLowerCase().includes(q);
     const matchStatus = filter === "all" || o.status === filter;
-    const matchType = typeFilter.length === 0 || o.types.some(t => typeFilter.includes(t));
+    const matchType = typeFilter.length === 0 || o.works.some(w => typeFilter.includes(w.name));
     const matchDoctor = doctorFilter === "Все врачи" || o.doctor.startsWith(doctorFilter.split(" ").slice(0, 2).join(" "));
     const matchTech = techFilter === "Все техники" || o.technician.startsWith(techFilter.split(" ").slice(0, 2).join(" "));
     return matchSearch && matchStatus && matchType && matchDoctor && matchTech;
@@ -366,7 +371,7 @@ function OrdersView() {
         </div>
 
         <div className="flex gap-2 flex-wrap items-center">
-          <TypeMultiDropdown selected={typeFilter} onChange={setTypeFilter} />
+          <WorkMultiDropdown selected={typeFilter} onChange={setTypeFilter} />
           <FilterDropdown value={doctorFilter} options={ALL_DOCTORS} onChange={setDoctorFilter} icon="Stethoscope" />
           <FilterDropdown value={techFilter} options={ALL_TECHNICIANS} onChange={setTechFilter} icon="Wrench" />
           <div className="w-px h-5 bg-border mx-1" />
@@ -390,7 +395,7 @@ function OrdersView() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Пациент</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Врач</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Техник</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Тип</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Вид работ</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Зубы</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Статус</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Сдача</th>
@@ -412,9 +417,12 @@ function OrdersView() {
                   <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{order.doctor}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{order.technician}</td>
                   <td className="px-4 py-3 hidden lg:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {order.types.map(t => (
-                        <span key={t} className="px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground font-medium whitespace-nowrap">{t}</span>
+                    <div className="flex flex-col gap-1">
+                      {order.works.map(w => (
+                        <div key={w.name} className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground font-medium whitespace-nowrap">{w.name}</span>
+                          <span className="text-xs font-mono font-semibold text-muted-foreground">×{w.qty}</span>
+                        </div>
                       ))}
                     </div>
                   </td>
