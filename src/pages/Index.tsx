@@ -129,16 +129,21 @@ function Toggle({ defaultOn }: { defaultOn: boolean }) {
   );
 }
 
+const ORDER_TYPES = ["Все типы", "Протезирование", "Ортодонтия", "Имплантация", "Виниры", "Коронки", "Мосты"];
+
 // ─── Section: Orders ──────────────────────────────────────────────────────────
 function OrdersView() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | Order["status"]>("all");
+  const [typeFilter, setTypeFilter] = useState("Все типы");
+  const [typeOpen, setTypeOpen] = useState(false);
 
   const filtered = mockOrders.filter(o => {
     const q = search.toLowerCase();
     const matchSearch = o.id.toLowerCase().includes(q) || o.patient.toLowerCase().includes(q) || o.doctor.toLowerCase().includes(q);
     const matchFilter = filter === "all" || o.status === filter;
-    return matchSearch && matchFilter;
+    const matchType = typeFilter === "Все типы" || o.type === typeFilter;
+    return matchSearch && matchFilter && matchType;
   });
 
   const filters = [
@@ -161,6 +166,33 @@ function OrdersView() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+
+        {/* Type dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setTypeOpen(!typeOpen)}
+            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl border transition-all whitespace-nowrap ${typeFilter !== "Все типы" ? "bg-primary/10 border-primary/40 text-primary" : "bg-white border-border text-muted-foreground hover:border-primary/40"}`}
+          >
+            <Icon name="Tag" size={13} />
+            {typeFilter}
+            <Icon name="ChevronDown" size={13} className={`transition-transform ${typeOpen ? "rotate-180" : ""}`} />
+          </button>
+          {typeOpen && (
+            <div className="absolute left-0 top-11 w-44 bg-white border border-border rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in-up">
+              {ORDER_TYPES.map(t => (
+                <button
+                  key={t}
+                  onClick={() => { setTypeFilter(t); setTypeOpen(false); }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-xs text-left hover:bg-muted/50 transition-colors ${typeFilter === t ? "text-primary font-medium bg-primary/5" : "text-foreground"}`}
+                >
+                  {t}
+                  {typeFilter === t && <Icon name="Check" size={12} />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-2 flex-wrap">
           {filters.map(f => (
             <button
@@ -177,6 +209,7 @@ function OrdersView() {
           Новый заказ
         </button>
       </div>
+      {typeOpen && <div className="fixed inset-0 z-20" onClick={() => setTypeOpen(false)} />}
 
       <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
         <table className="w-full">
